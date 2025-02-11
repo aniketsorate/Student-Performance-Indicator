@@ -1,46 +1,54 @@
-from flask import Flask,request,render_template
+import streamlit as st
 import numpy as np
 import pandas as pd
+from src.pipeline.predict_pipeline import CustomData, PredictPipeline
 
-from sklearn.preprocessing import StandardScaler
-from src.pipeline.predict_pipeline import CustomData,PredictPipeline
+# Streamlit App Title
+st.title("Student Exam Performance Indicator")
 
-application=Flask(__name__)
+# Form for user input
+with st.form("student_form"):
+    st.write("### Student Exam Performance Prediction")
 
-app=application
+    # Input fields
+    gender = st.selectbox("Gender", ["Select your Gender", "male", "female"])
+    ethnicity = st.selectbox("Race or Ethnicity", ["Select Ethnicity", "group A", "group B", "group C", "group D", "group E"])
+    parental_level_of_education = st.selectbox("Parental Level of Education", [
+        "Select Parent Education", "associate's degree", "bachelor's degree", "high school", "master's degree", "some college", "some high school"
+    ])
+    lunch = st.selectbox("Lunch Type", ["Select Lunch Type", "free/reduced", "standard"])
+    test_preparation_course = st.selectbox("Test Preparation Course", ["Select Test_course", "none", "completed"])
+    reading_score = st.number_input("Reading Score out of 100", min_value=0, max_value=100)
+    writing_score = st.number_input("Writing Score out of 100", min_value=0, max_value=100)
 
-## Route for a home page
+    # Submit button
+    submitted = st.form_submit_button("Predict your Maths Score")
 
-@app.route('/')
-def index():
-    return render_template('index.html') 
-
-@app.route('/predictdata',methods=['GET','POST'])
-def predict_datapoint():
-    if request.method=='GET':
-        return render_template('home.html')
+# If the form is submitted
+if submitted:
+    # Validate inputs
+    if (gender == "Select your Gender" or ethnicity == "Select Ethnicity" or 
+        parental_level_of_education == "Select Parent Education" or lunch == "Select Lunch Type" or 
+        test_preparation_course == "Select Test_course"):
+        st.error("Please fill all the fields!")
     else:
-        data=CustomData(
-            gender=request.form.get('gender'),
-            race_ethnicity=request.form.get('ethnicity'),
-            parental_level_of_education=request.form.get('parental_level_of_education'),
-            lunch=request.form.get('lunch'),
-            test_preparation_course=request.form.get('test_preparation_course'),
-            reading_score=float(request.form.get('writing_score')),
-            writing_score=float(request.form.get('reading_score'))
-
+        # Create CustomData object
+        data = CustomData(
+            gender=gender,
+            race_ethnicity=ethnicity,
+            parental_level_of_education=parental_level_of_education,
+            lunch=lunch,
+            test_preparation_course=test_preparation_course,
+            reading_score=float(reading_score),
+            writing_score=float(writing_score)
         )
-        pred_df=data.get_data_as_data_frame()
-        print(pred_df)
-        print("Before Prediction")
 
-        predict_pipeline=PredictPipeline()
-        print("Mid Prediction")
-        results=predict_pipeline.predict(pred_df)
-        print("after Prediction")
-        return render_template('home.html',results=results[0])
-    
+        # Convert data to DataFrame
+        pred_df = data.get_data_as_data_frame()
 
-if __name__=="__main__":
-    app.debug = True
-    app.run()        
+        # Make prediction
+        predict_pipeline = PredictPipeline()
+        results = predict_pipeline.predict(pred_df)
+
+        # Display prediction
+        st.success(f"The predicted Maths Score is: {results[0]}")
